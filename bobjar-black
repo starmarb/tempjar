@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <style>
+        body {
+            background-color: #000000; 
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #ascii-grid {
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            line-height: 1; 
+            font-size: 0.9rem;
+            max-height: 80vh;
+            overflow: auto;
+            background-color: transparent; 
+            color: #ffffff; 
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 10px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+            margin: auto; 
+            max-width: fit-content;
+        }
+    </style>
+</head>
+<body>
+
+    <pre id="ascii-grid">Loading ASCII Render...</pre>
+
+    <script>
+        window.onload = function () {
+            const PI = Math.PI;
+            const GRID_SIZE = 60; 
+            const X_MIN = -3.2;
+            const X_MAX = 3.2;
+            const Y_MIN = -5.5;
+            const Y_MAX = 5.5;
+
+            const STEP_X = (X_MAX - X_MIN) / GRID_SIZE;
+            const STEP_Y = (Y_MAX - Y_MIN) / GRID_SIZE;
+
+            let currentOffset = 0; 
+            const SCROLL_SPEED = 0.1; 
+
+            const MASTER_SEQUENCE = [
+                'b', 'o', 'b', '#', '#', '#', '#', '#', '#', '#', 
+                
+                'b', 'o', 'b', '@', '@', '@', '@', '@', '@', '@', 
+                
+                'b', 'o', 'b', '%', '%', '%', '%', '%', '%', '%', 
+                
+                'b', 'o', 'b', '*', '*', '*', '*', '*', '*', '*', 
+                
+                'b', 'o', 'b', '-', '-', '-', '-', '-', '-', '-', 
+                
+                'b', 'o', 'b', '=', '=', '=', '=', '=', '=', '='
+            ]; 
+            
+            const EMPTY_CHAR = ' ';
+            
+            const patternLength = MASTER_SEQUENCE.length; 
+            
+            const SYNCH_FACTOR = GRID_SIZE / patternLength; 
+            
+            const gridElement = document.getElementById('ascii-grid');
+            
+            function getMaxY(x) {
+                const y_circle = Math.sqrt(9 - x * x);
+                if (Math.abs(x) < 1.69257) {
+                    return 3;
+                }
+                return isNaN(y_circle) ? -Infinity : y_circle;
+            }
+
+            function getMinY(x) {
+                const y_circle = -Math.sqrt(9 - x * x);
+                if (Math.abs(x) < 0.99336) {
+                    return -3.1;
+                }
+                return isNaN(y_circle) ? +Infinity : y_circle;
+            }
+
+            function animate() {
+                let output = '';
+
+                const totalShift = currentOffset; 
+                
+                const totalColumnShift = Math.floor(totalShift * patternLength);
+
+                for (let i = 0; i < GRID_SIZE; i++) {
+                    const y_grid = Y_MAX - i * STEP_Y - (STEP_Y / 2);
+
+                    for (let j = 0; j < GRID_SIZE; j++) {
+                        const x_grid = X_MIN + j * STEP_X + (STEP_X / 2);
+
+                        const y_max = getMaxY(x_grid);
+                        const y_min = getMinY(x_grid);
+
+                        if (y_grid <= y_max && y_grid >= y_min) {
+                            
+                            const shiftedColumnIndex = (j + totalColumnShift + GRID_SIZE) % GRID_SIZE;
+
+                            const charIndex = Math.floor(shiftedColumnIndex / SYNCH_FACTOR);
+                            
+                            output += MASTER_SEQUENCE[charIndex % patternLength];
+                        } else {
+                            output += EMPTY_CHAR;
+                        }
+                    }
+                    output += '\n';
+                }
+
+                gridElement.textContent = output;
+
+                currentOffset += SCROLL_SPEED * (1 / 60); 
+                if (currentOffset >= SYNCH_FACTOR) {
+                    currentOffset -= SYNCH_FACTOR;
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+        };
+    </script>
+</body>
+</html>

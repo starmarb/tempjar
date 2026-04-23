@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Shape Renderer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the ASCII grid */
+        #ascii-grid {
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            line-height: 1; /* Tighter line height for better square characters */
+            font-size: 0.9rem;
+            max-height: 80vh;
+            overflow: auto;
+            background-color: #000000; /* Dark background */
+            /* Initial color set by JS, but keeping the default for safety */
+            color: #d1d5db; 
+            transition: color 0.5s ease-in-out; /* Smooth color transitions */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<!-- Minimalist Body: Use a dark background and center the single grid element -->
+<body class="bg-black-1000 min-h-screen flex items-center justify-center p-4">
+
+    <!-- Only the ASCII grid remains -->
+    <pre id="ascii-grid">Loading ASCII Render...</pre>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const PI = Math.PI;
+            const GRID_SIZE = 60;
+            const X_MIN = -3.2;
+            const X_MAX = 3.2;
+            
+            // Further increased Y range to compress the shape more vertically (11.0 range vs 6.4 range for X)
+            const Y_MIN = -5.5; 
+            const Y_MAX = 5.5;
+
+            const STEP_X = (X_MAX - X_MIN) / GRID_SIZE;
+            const STEP_Y = (Y_MAX - Y_MIN) / GRID_SIZE;
+
+            // Array of characters to be used for the randomized fill
+            const FILL_CHARS = ['*', '+', '#', '$', '%', '@', '&', '?', '/', '\\', '=', '~','>', '<', '£', '€'];
+            const EMPTY_CHAR = ' ';
+            
+            const gridElement = document.getElementById('ascii-grid');
+            
+            // Color cycling setup
+            const COLOR_PALETTE = [
+                '#ff79c6', // Pink
+                '#bd93f9', // Purple
+                '#ffb86c', // Orange
+                '#50fa7b', // Green
+                '#8be9fd', // Cyan
+                '#f1fa8c', // Yellow
+                '#ff5555'  // Red
+            ];
+            let colorIndex = 0;
+
+
+            /**
+             * Returns a random character from the FILL_CHARS array.
+             * @returns {string} A random ASCII character.
+             */
+            function getRandomChar() {
+                const index = Math.floor(Math.random() * FILL_CHARS.length);
+                return FILL_CHARS[index];
+            }
+
+
+            /**
+             * Defines the upper boundary Y-coordinate for a given X based on the new equations.
+             * @param {number} x The x-coordinate.
+             * @returns {number} The maximum y-coordinate for the boundary at x.
+             */
+            function getMaxY(x) {
+                // 1. Circle upper boundary: x^2 + y^2 = 9
+                const y_circle = Math.sqrt(9 - x * x);
+
+                // 2. NEW Top flat line segment: y = 3 for -1.69257 < x < 1.69257
+                if (Math.abs(x) < 1.69257) {
+                    // Use the flat line y=3 as the outer boundary for the cap area
+                    return 3;
+                }
+
+                // Default to circle
+                return isNaN(y_circle) ? -Infinity : y_circle;
+            }
+
+            /**
+             * Defines the lower boundary Y-coordinate for a given X based on the equations.
+             * @param {number} x The x-coordinate.
+             * @returns {number} The minimum y-coordinate for the boundary at x.
+             */
+            function getMinY(x) {
+                // 1. Circle lower boundary: x^2 + y^2 = 9
+                const y_circle = -Math.sqrt(9 - x * x);
+
+                // 2. Bottom flat line segment: y = -3.1 for -0.99336 < x < 0.99336
+                if (Math.abs(x) < 0.99336) {
+                    // Use the flat line y=-3.1 as the outer boundary for the cap area
+                    return -3.1;
+                }
+
+                // Default to circle
+                return isNaN(y_circle) ? +Infinity : y_circle;
+            }
+
+            /**
+             * Renders the shape onto the ASCII grid.
+             * This runs only once on load to ensure the randomized characters are static.
+             */
+            function renderShape() {
+                let output = '';
+
+                // Iterate over the y-axis (from top to bottom)
+                for (let i = 0; i < GRID_SIZE; i++) {
+                    // Calculate the real world y-coordinate for the center of the current cell
+                    const y = Y_MAX - i * STEP_Y - (STEP_Y / 2);
+
+                    // Iterate over the x-axis (from left to right)
+                    for (let j = 0; j < GRID_SIZE; j++) {
+                        // Calculate the real world x-coordinate for the center of the current cell
+                        const x = X_MIN + j * STEP_X + (STEP_X / 2);
+
+                        // Check if the point (x, y) is inside the shape
+                        const y_max = getMaxY(x);
+                        const y_min = getMinY(x);
+
+                        if (y <= y_max && y >= y_min) {
+                            output += getRandomChar(); 
+                        } else {
+                            output += EMPTY_CHAR;
+                        }
+                    }
+                    output += '\n';
+                }
+
+                gridElement.textContent = output;
+            }
+            
+            /**
+             * Cycles through the predefined color palette and updates the grid color.
+             */
+            function cycleColor() {
+                // Cycle through the colors in the palette
+                gridElement.style.color = COLOR_PALETTE[colorIndex];
+                colorIndex = (colorIndex + 1) % COLOR_PALETTE.length;
+            }
+
+            // Render the shape once on page load (static fill characters).
+            renderShape();
+            
+            // Start color cycling (dynamic colors).
+            setInterval(cycleColor, 500); // Change color every 500 milliseconds (0.5s)
+        });
+    </script>
+</body>
+</html>
