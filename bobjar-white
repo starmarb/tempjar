@@ -54,16 +54,16 @@
             const MASTER_SEQUENCE = [
                 't', 'e', 'm', 'p', 'o', 'r', 'a', 'r', 'y', ' ',
                 
-                't', 'e', 'm', 'p', 'l', 'e', ' ', '∗', ' ',
+                't', 'e', 'm', 'p', 'l', 'e', '∗',
                 
                 't', 'e', 'm', 'p', 'o', 'r', 'a', 'r', 'y', ' ',
                 
-                't', 'e', 'm', 'p', 'l', 'e', ' ', '∗', ' ',
+                't', 'e', 'm', 'p', 'l', 'e', '∗',
                 
                 't', 'e', 'm', 'p', 'o', 'r', 'a', 'r', 'y', ' ',
                 
-                't', 'e', 'm', 'p', 'l', 'e', ' ', '∗', ' ',
-            ]; 
+                't', 'e', 'm', 'p', 'l', 'e', '∗', 
+            ];
             
             const EMPTY_CHAR = ' ';
             
@@ -105,7 +105,7 @@
                         const y_max = getMaxY(x_grid);
                         const y_min = getMinY(x_grid);
 
-                        if (true) {
+                        if (y_grid <= y_max && y_grid >= y_min) {
                             
                             const shiftedColumnIndex = (j + totalColumnShift + GRID_SIZE) % GRID_SIZE;
 
