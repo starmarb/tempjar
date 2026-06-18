@@ -74,40 +74,12 @@
         }
         #theme-toggle.light-mode svg { stroke: #000000; }
         #theme-toggle.light-mode:hover { background: rgba(0, 0, 0, 0.1); }
-
-        #text-input {
-            margin-top: 1rem;
-            padding: 0.5rem 0.75rem;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            background: transparent;
-            border: 2px solid;
-            border-radius: 0.5rem;
-            text-align: center;
-            width: 16rem;
-            max-width: 80vw;
-            outline: none;
-            transition: all 0.3s;
-        }
-
-        #text-input.dark-mode {
-            color: #ffffff;
-            border-color: #ffffff;
-        }
-        #text-input.dark-mode::placeholder { color: rgba(255, 255, 255, 0.4); }
-
-        #text-input.light-mode {
-            color: #000000;
-            border-color: #000000;
-        }
-        #text-input.light-mode::placeholder { color: rgba(0, 0, 0, 0.4); }
     </style>
 </head>
 <body>
     <div id="ascii-container">
         <button id="theme-toggle" aria-label="Toggle theme"></button>
         <div id="ascii-grid"></div>
-        <input id="text-input" type="text" maxlength="40" placeholder="type your text..." />
     </div>
 
     <script>
@@ -121,9 +93,7 @@
             const STEP_X = (X_MAX - X_MIN) / GRID_SIZE;
             const STEP_Y = (Y_MAX - Y_MIN) / GRID_SIZE;
 
-            const DEFAULT_TEXT = 'temporary temple ∗ ';
-            const SEPARATOR = ' ∗ '; // shown between repeats so words don't run together
-            let TEXT = DEFAULT_TEXT;
+            const TEXT = 'temporary temple ∗ ';
             const SCROLL_SPEED = 4; // characters per second
             const EMPTY_CHAR = ' ';
 
@@ -143,7 +113,6 @@
             const bodyElement = document.body;
             const gridElement = document.getElementById('ascii-grid');
             const toggleButton = document.getElementById('theme-toggle');
-            const textInput = document.getElementById('text-input');
 
             const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
             const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
@@ -167,16 +136,12 @@
                     toggleButton.classList.remove('light-mode');
                     toggleButton.classList.add('dark-mode');
                     toggleButton.setAttribute('aria-label', 'Switch to Light Mode');
-                    textInput.classList.remove('light-mode');
-                    textInput.classList.add('dark-mode');
                 } else {
                     bodyElement.style.backgroundColor = '#ffffff';
                     toggleButton.innerHTML = moonIcon;
                     toggleButton.classList.remove('dark-mode');
                     toggleButton.classList.add('light-mode');
                     toggleButton.setAttribute('aria-label', 'Switch to Dark Mode');
-                    textInput.classList.remove('dark-mode');
-                    textInput.classList.add('light-mode');
                 }
             }
 
@@ -184,13 +149,6 @@
                 isDarkMode = !isDarkMode;
                 updateThemeAppearance();
             });
-
-            textInput.addEventListener('input', () => {
-                const v = textInput.value.trim();
-                // Fall back to the default so the jar is never empty
-                TEXT = v.length > 0 ? v + SEPARATOR : DEFAULT_TEXT;
-            });
-
             updateThemeAppearance();
 
             function animate(timestamp) {
