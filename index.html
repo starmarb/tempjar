@@ -28,7 +28,7 @@
         #ascii-grid {
             font-family: 'Courier New', monospace;
             white-space: pre;
-            line-height: 0.8; 
+            line-height: 1; 
             font-size: 0.9rem;
             overflow: visible; 
             padding: 0; 
@@ -132,16 +132,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
     <script>
         window.onload = function () {
-            const GRID_SIZE = 60;
             const X_MIN = -3.2;
             const X_MAX = 3.2;
-            const Y_MIN = -5.5;
-            const Y_MAX = 5.5;
+            const Y_MIN = -3.3;   // cropped to hug the jar (was -5.5)
+            const Y_MAX = 3.2;    // cropped to hug the jar (was 5.5)
 
-            const STEP_X = (X_MAX - X_MIN) / GRID_SIZE;
-            const STEP_Y = (Y_MAX - Y_MIN) / GRID_SIZE;
+            const COLS = 60;                                    // columns (across) — unchanged
+            const STEP_X = (X_MAX - X_MIN) / COLS;              // 0.1067 — unchanged
+            const STEP_Y = 11 / 60;                             // 0.1833 — the ORIGINAL step; keeps the jar's aspect correct
+            const ROWS = Math.round((Y_MAX - Y_MIN) / STEP_Y);  // ≈ 35 rows, derived so STEP_Y stays fixed
 
-            const DEFAULT_TEXT = 'type your text  ∗ ';
+            const DEFAULT_TEXT = 'type your text... ∗ ';
             const SEPARATOR = ' ∗ '; // shown between repeats so words don't run together
             let TEXT = DEFAULT_TEXT;
             const SCROLL_SPEED = 4; // characters per second
@@ -149,9 +150,9 @@
 
             // Pre-generate a grid of random hues that stay fixed per cell
             const hueGrid = [];
-            for (let i = 0; i < GRID_SIZE; i++) {
+            for (let i = 0; i < ROWS; i++) {
                 hueGrid[i] = [];
-                for (let j = 0; j < GRID_SIZE; j++) {
+                for (let j = 0; j < COLS; j++) {
                     hueGrid[i][j] = Math.floor(Math.random() * 360);
                 }
             }
@@ -230,10 +231,10 @@
 
                 // Build HTML with colored spans
                 let html = '';
-                for (let i = 0; i < GRID_SIZE; i++) {
+                for (let i = 0; i < ROWS; i++) {
                     const y_grid = Y_MAX - i * STEP_Y - (STEP_Y / 2);
 
-                    for (let j = 0; j < GRID_SIZE; j++) {
+                    for (let j = 0; j < COLS; j++) {
                         const x_grid = X_MIN + j * STEP_X + (STEP_X / 2);
                         const y_max = getMaxY(x_grid);
                         const y_min = getMinY(x_grid);
@@ -268,8 +269,8 @@
                 const cellW = ctx.measureText('M').width; // monospace: every char same width
                 const cellH = fontSize;                   // line-height: 1, like the page
 
-                canvas.width = Math.ceil(GRID_SIZE * cellW);
-                canvas.height = Math.ceil(GRID_SIZE * cellH);
+                canvas.width = Math.ceil(COLS * cellW);
+                canvas.height = Math.ceil(ROWS * cellH);
 
                 // Re-apply font (resizing the canvas resets the context)
                 ctx.font = font;
@@ -282,9 +283,9 @@
 
                 const lightness = isDarkMode ? '65%' : '40%';
 
-                for (let i = 0; i < GRID_SIZE; i++) {
+                for (let i = 0; i < ROWS; i++) {
                     const y_grid = Y_MAX - i * STEP_Y - (STEP_Y / 2);
-                    for (let j = 0; j < GRID_SIZE; j++) {
+                    for (let j = 0; j < COLS; j++) {
                         const x_grid = X_MIN + j * STEP_X + (STEP_X / 2);
                         if (y_grid <= getMaxY(x_grid) && y_grid >= getMinY(x_grid)) {
                             const ch = text[(j + offset) % text.length];
