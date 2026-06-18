@@ -101,6 +101,24 @@
             border-color: #000000;
         }
         #text-input.light-mode::placeholder { color: rgba(0, 0, 0, 0.4); }
+
+        #save-gif {
+            margin-top: 0.75rem;
+            padding: 0.5rem 1rem;
+            border: 2px solid;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            background: transparent;
+            transition: all 0.3s;
+        }
+        #save-gif:disabled { cursor: progress; opacity: 0.6; }
+
+        #save-gif.dark-mode { color: #ffffff; border-color: #ffffff; }
+        #save-gif.dark-mode:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
+        #save-gif.light-mode { color: #000000; border-color: #000000; }
+        #save-gif.light-mode:hover:not(:disabled) { background: rgba(0, 0, 0, 0.1); }
     </style>
 </head>
 <body>
@@ -108,8 +126,10 @@
         <button id="theme-toggle" aria-label="Toggle theme"></button>
         <div id="ascii-grid"></div>
         <input id="text-input" type="text" maxlength="40" placeholder="type your text..." />
+        <button id="save-gif">save as gif</button>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
     <script>
         window.onload = function () {
             const GRID_SIZE = 60;
@@ -121,7 +141,7 @@
             const STEP_X = (X_MAX - X_MIN) / GRID_SIZE;
             const STEP_Y = (Y_MAX - Y_MIN) / GRID_SIZE;
 
-            const DEFAULT_TEXT = 'temporary temple ∗ ';
+            const DEFAULT_TEXT = 'type your text  ∗ ';
             const SEPARATOR = ' ∗ '; // shown between repeats so words don't run together
             let TEXT = DEFAULT_TEXT;
             const SCROLL_SPEED = 4; // characters per second
@@ -144,6 +164,7 @@
             const gridElement = document.getElementById('ascii-grid');
             const toggleButton = document.getElementById('theme-toggle');
             const textInput = document.getElementById('text-input');
+            const saveGifButton = document.getElementById('save-gif');
 
             const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
             const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
@@ -169,6 +190,8 @@
                     toggleButton.setAttribute('aria-label', 'Switch to Light Mode');
                     textInput.classList.remove('light-mode');
                     textInput.classList.add('dark-mode');
+                    saveGifButton.classList.remove('light-mode');
+                    saveGifButton.classList.add('dark-mode');
                 } else {
                     bodyElement.style.backgroundColor = '#ffffff';
                     toggleButton.innerHTML = moonIcon;
@@ -177,6 +200,8 @@
                     toggleButton.setAttribute('aria-label', 'Switch to Dark Mode');
                     textInput.classList.remove('dark-mode');
                     textInput.classList.add('light-mode');
+                    saveGifButton.classList.remove('dark-mode');
+                    saveGifButton.classList.add('light-mode');
                 }
             }
 
@@ -229,6 +254,106 @@
                 gridElement.innerHTML = html.slice(0, -1);
                 requestAnimationFrame(animate);
             }
+
+            // ---- GIF export ----
+            // Draw a single frame (one integer scroll offset) onto a canvas,
+            // mirroring the on-screen jar geometry and colors exactly.
+            function renderFrameToCanvas(offset, text) {
+                const fontSize = 16;
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const font = `${fontSize}px 'Courier New', monospace`;
+
+                ctx.font = font;
+                const cellW = ctx.measureText('M').width; // monospace: every char same width
+                const cellH = fontSize;                   // line-height: 1, like the page
+
+                canvas.width = Math.ceil(GRID_SIZE * cellW);
+                canvas.height = Math.ceil(GRID_SIZE * cellH);
+
+                // Re-apply font (resizing the canvas resets the context)
+                ctx.font = font;
+                ctx.textBaseline = 'top';
+                ctx.textAlign = 'left';
+
+                // Solid background matching the current theme
+                ctx.fillStyle = isDarkMode ? '#000000' : '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                const lightness = isDarkMode ? '65%' : '40%';
+
+                for (let i = 0; i < GRID_SIZE; i++) {
+                    const y_grid = Y_MAX - i * STEP_Y - (STEP_Y / 2);
+                    for (let j = 0; j < GRID_SIZE; j++) {
+                        const x_grid = X_MIN + j * STEP_X + (STEP_X / 2);
+                        if (y_grid <= getMaxY(x_grid) && y_grid >= getMinY(x_grid)) {
+                            const ch = text[(j + offset) % text.length];
+                            ctx.fillStyle = `hsl(${hueGrid[i][j]}, 100%, ${lightness})`;
+                            ctx.fillText(ch, j * cellW, i * cellH);
+                        }
+                    }
+                }
+                return canvas;
+            }
+
+            // Resolve the encoder's worker script as a same-origin blob URL,
+            // which avoids cross-origin worker restrictions on some browsers.
+            async function getWorkerUrl() {
+                const cdn = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js';
+                try {
+                    const blob = await (await fetch(cdn)).blob();
+                    return URL.createObjectURL(blob);
+                } catch (e) {
+                    return cdn; // fall back to the direct URL
+                }
+            }
+
+            saveGifButton.addEventListener('click', async () => {
+                if (typeof GIF === 'undefined') {
+                    alert('GIF library failed to load. Check your internet connection.');
+                    return;
+                }
+
+                const text = TEXT;                       // snapshot the current text
+                const frameDelay = 1000 / SCROLL_SPEED;  // ms per character step
+                const originalLabel = saveGifButton.textContent;
+                saveGifButton.disabled = true;
+                saveGifButton.textContent = 'preparing...';
+
+                const workerScript = await getWorkerUrl();
+                const gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    repeat: 0, // loop forever
+                    workerScript: workerScript,
+                    background: isDarkMode ? '#000000' : '#ffffff'
+                });
+
+                // One full loop = one frame per character in the string
+                for (let offset = 0; offset < text.length; offset++) {
+                    const frame = renderFrameToCanvas(offset, text);
+                    gif.addFrame(frame, { delay: frameDelay, copy: true });
+                }
+
+                gif.on('progress', (p) => {
+                    saveGifButton.textContent = `rendering ${Math.round(p * 100)}%`;
+                });
+
+                gif.on('finished', (blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'temporary-temple.gif';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    saveGifButton.disabled = false;
+                    saveGifButton.textContent = originalLabel;
+                });
+
+                gif.render();
+            });
 
             requestAnimationFrame(animate);
         };
