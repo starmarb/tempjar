@@ -2,19 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
     <style>
-        body {
-            background-color: #000000; 
+        html, body {
+            background-color: #000000;
             margin: 0;
             padding: 0;
+            min-height: 100vh;
+            min-height: 100dvh; /* better on mobile with dynamic toolbars */
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
             transition: background-color 0.3s;
+            box-sizing: border-box;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
         #ascii-container {
@@ -22,20 +30,22 @@
             flex-direction: column;
             align-items: center;
             padding: 0;
-            margin: 2rem;
+            margin: 1.25rem;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         #ascii-grid {
             font-family: 'Courier New', monospace;
             white-space: pre;
-            line-height: 1; 
-            font-size: 0.9rem;
-            overflow: visible; 
-            padding: 0; 
-            background-color: transparent; 
+            line-height: 1;
+            font-size: 0.9rem; /* fallback; real size is set by JS to fit the screen */
+            overflow: visible;
+            padding: 0;
+            background-color: transparent;
             border-radius: 0;
-            box-shadow: none; 
-            margin: 0 auto; 
+            box-shadow: none;
+            margin: 0 auto;
             max-width: fit-content;
             transition: box-shadow 0.3s;
         }
@@ -53,8 +63,10 @@
             align-items: center;
             justify-content: center;
             margin-bottom: 0.25rem;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
-        
+
         #theme-toggle svg {
             width: 20px;
             height: 20px;
@@ -77,9 +89,9 @@
 
         #text-input {
             margin-top: 1rem;
-            padding: 0.5rem 0.75rem;
+            padding: 0.6rem 0.75rem;
             font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
+            font-size: 16px; /* 16px keeps iOS from zooming in when focused */
             background: transparent;
             border: 2px solid;
             border-radius: 0.5rem;
@@ -87,6 +99,7 @@
             width: 16rem;
             max-width: 80vw;
             outline: none;
+            box-sizing: border-box;
             transition: all 0.3s;
         }
 
@@ -104,7 +117,7 @@
 
         #save-gif {
             margin-top: 0.75rem;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1rem;
             border: 2px solid;
             border-radius: 0.5rem;
             cursor: pointer;
@@ -112,6 +125,8 @@
             font-weight: bold;
             background: transparent;
             transition: all 0.3s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         #save-gif:disabled { cursor: progress; opacity: 0.6; }
 
@@ -119,6 +134,11 @@
         #save-gif.dark-mode:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
         #save-gif.light-mode { color: #000000; border-color: #000000; }
         #save-gif.light-mode:hover:not(:disabled) { background: rgba(0, 0, 0, 0.1); }
+
+        @media (max-width: 480px) {
+            #ascii-container { margin: 0.75rem; }
+            #text-input { margin-top: 0.75rem; }
+        }
     </style>
 </head>
 <body>
@@ -170,6 +190,33 @@
             const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
             const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
 
+            // ---- Responsive sizing ----
+            // The grid is monospace, so scaling the font size uniformly preserves
+            // the jar's shape. We measure the real character aspect ratio once,
+            // then pick the largest font size that fits both width and height.
+            const CHAR_W_RATIO = (function () {
+                const ctx = document.createElement('canvas').getContext('2d');
+                ctx.font = "100px 'Courier New', monospace";
+                return ctx.measureText('M').width / 100; // ≈ 0.6 for Courier New
+            })();
+            const MAX_FONT = 14.4;  // ~0.9rem, the original desktop size
+            const MIN_FONT = 4;
+
+            function fitGrid() {
+                // Horizontal space available to the grid
+                const availW = Math.min(window.innerWidth, 640) * 0.94;
+                // Vertical space, reserving room for the toggle, input and button
+                const availH = window.innerHeight - 190;
+
+                const fsByWidth = availW / (COLS * CHAR_W_RATIO);
+                const fsByHeight = availH / ROWS;
+
+                let fs = Math.min(fsByWidth, fsByHeight, MAX_FONT);
+                fs = Math.max(fs, MIN_FONT);
+
+                gridElement.style.fontSize = fs + 'px';
+            }
+
             function getMaxY(x) {
                 const y_circle = Math.sqrt(9 - x * x);
                 if (Math.abs(x) < 1.69257) return 3;
@@ -218,6 +265,9 @@
             });
 
             updateThemeAppearance();
+            fitGrid();
+            window.addEventListener('resize', fitGrid);
+            window.addEventListener('orientationchange', fitGrid);
 
             function animate(timestamp) {
                 if (!lastTime) lastTime = timestamp;
